@@ -1,35 +1,17 @@
-FROM python:3.11.0b1-buster
+FROM python:3.11-slim
 
-# set work directory
 WORKDIR /app
 
-
-RUN sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list \
-  && sed -i 's|http://security.debian.org|http://archive.debian.org|g' /etc/apt/sources.list \
-  && apt-get update && apt-get install --no-install-recommends -y dnsutils libpq-dev python3-dev \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
-
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-
-# Install dependencies
-RUN python -m pip install --no-cache-dir pip==22.0.4
-COPY requirements.txt requirements.txt
+# Install deps first (better layer caching)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the source
+COPY . .
 
-# copy project
-COPY . /app/
-
-
-#expose port 8000
+# Expose if you ever run it locally
 EXPOSE 8000
 
-
-RUN python3 /app/manage.py migrate
-
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers","6", "pygoat.wsgi"]
+# Do NOT run migrations at build time
+# Just a harmless default; not executed during build
+CMD ["python", "--version"]
