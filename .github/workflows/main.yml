@@ -45,6 +45,7 @@ jobs:
           command: cves
           image: pygoat_app:latest
           only-severities: critical,high
+          save-results: true
           sarif-file: scout-report.sarif
       - name: Verify SARIF exists
         run: test -f scout-report.sarif && ls -la scout-report.sarif
