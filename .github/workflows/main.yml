@@ -44,29 +44,21 @@ jobs:
           username: ${{ secrets.REPO_USER }}
           password: ${{ secrets.REPO_PWD }}
 
-      - name: Run Docker Scout CVE scan (SARIF)
-        id: scout
+      - name: Run Docker Scout CVE scan (writes SARIF)
         uses: docker/scout-action@v1.16.1
         with:
           command: cves
           image: pygoat_app:latest
           only-severities: critical,high
-          format: sarif
-          output: scout-report.sarif
-          save: true
-          context: .
-        continue-on-error: true
+          sarif-file: scout-report.sarif    # <-- supported input
+          format: sarif                     # <-- supported input
+          output: scout-report.sarif        # <-- supported input
 
-      - name: Fallback — Trivy image scan to SARIF
-        if: ${{ !hashFiles('scout-report.sarif') }}
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: 'image'
-          image-ref: 'pygoat_app:latest'
-          ignore-unfixed: true
-          format: 'sarif'
-          output: 'scout-report.sarif'
-          severity: 'CRITICAL'
+      - name: Verify SARIF exists
+        run: |
+          echo "Workspace contents:"
+          ls -la
+          test -f scout-report.sarif && echo "Found scout-report.sarif"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.4.3
