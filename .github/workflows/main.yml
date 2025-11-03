@@ -35,20 +35,29 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Build Docker Image
         run: docker build -f Dockerfile -t pygoat_app:latest .
-      - name: Docker Scout CVEs SARIF
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.REPO_USER }}
+          password: ${{ secrets.REPO_PWD }}
+
+      - name: Run Docker Scout CVE scan
         uses: docker/scout-action@v1.15.0
         with:
-          dockerhub-user: ${{ secrets.REPO_USER }}
-          dockerhub-password: ${{ secrets.REPO_PWD }}
           command: cves
           image: pygoat_app:latest
           only-severities: critical,high
           save-results: true
-          sarif-file: scout-report.sarif
+          output: scout-report.sarif
+          format: sarif
+
       - name: Verify SARIF exists
         run: test -f scout-report.sarif && ls -la scout-report.sarif
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.4.3
         if: always()
