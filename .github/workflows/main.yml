@@ -1,5 +1,4 @@
 name: build
-
 on:
   push:
     branches:
@@ -13,6 +12,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Run Trivy vulnerability scanner in repo mode
         uses: aquasecurity/trivy-action@0.28.0
         env:
@@ -23,6 +23,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL'
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4.4.3
         with:
@@ -36,19 +37,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Ensure Dockerfile exists at repo root
-        run: |
-          if [ ! -f Dockerfile ]; then
-            echo "No Dockerfile found at repo root. Creating a minimal one for scanning."
-            cat > Dockerfile <<'EOF'
-FROM python:3.11-slim
-WORKDIR /app
-COPY . .
-CMD ["python","--version"]
-EOF
-          fi
-          ls -la
-
       - name: Build Docker Image
         run: docker build -t pygoat_app:latest .
 
@@ -58,7 +46,7 @@ EOF
           username: ${{ secrets.REPO_USER }}
           password: ${{ secrets.REPO_PWD }}
 
-      - name: Run Docker Scout CVE scan (writes SARIF)
+      - name: Run Docker Scout CVE scan
         uses: docker/scout-action@v1.16.1
         with:
           command: cves
@@ -68,13 +56,6 @@ EOF
           output: scout-report.sarif
           save: true
           context: .
-
-      - name: Verify SARIF exists
-        run: |
-          echo "Workspace contents:"
-          ls -la
-          echo "Checking for scout-report.sarif..."
-          test -f scout-report.sarif && echo "Found SARIF" || (echo "SARIF missing" && exit 1)
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.4.3
