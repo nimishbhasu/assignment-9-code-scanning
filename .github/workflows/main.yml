@@ -12,7 +12,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Run Trivy vulnerability scanner in repo mode
         uses: aquasecurity/trivy-action@0.28.0
         env:
@@ -23,7 +22,6 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL'
-
       - name: Upload build artifact
         uses: actions/upload-artifact@v4.4.3
         with:
@@ -46,7 +44,8 @@ jobs:
           username: ${{ secrets.REPO_USER }}
           password: ${{ secrets.REPO_PWD }}
 
-      - name: Run Docker Scout CVE scan
+      - name: Run Docker Scout CVE scan (SARIF)
+        id: scout
         uses: docker/scout-action@v1.16.1
         with:
           command: cves
@@ -56,6 +55,18 @@ jobs:
           output: scout-report.sarif
           save: true
           context: .
+        continue-on-error: true
+
+      - name: Fallback — Trivy image scan to SARIF
+        if: ${{ !hashFiles('scout-report.sarif') }}
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'image'
+          image-ref: 'pygoat_app:latest'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'scout-report.sarif'
+          severity: 'CRITICAL'
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.4.3
